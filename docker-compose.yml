@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  localstack:
+    image: localstack/localstack:3.6
+    container_name: localstack
+    environment:
+      - SERVICES=s3
+      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY-}
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - "./localstack:/var/lib/localstack"
+
+  postgres:
+    image: postgres:16
+    container_name: etl-postgres
+    environment:
+      - POSTGRES_USER=etl_user
+      - POSTGRES_PASSWORD=etl_password
+      - POSTGRES_DB=etl_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: etl-backend
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - S3_BUCKET_NAME=etl-bucket
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=etl_user
+      - POSTGRES_PASSWORD=etl_password
+      - POSTGRES_DB=etl_db
+    depends_on:
+      - localstack
+      - postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./backend:/app"
+
+volumes:
+  postgres-data:
+
+
